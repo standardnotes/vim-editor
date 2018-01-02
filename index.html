@@ -3,17 +3,18 @@
   <head>
     <base target="_blank">
     <meta charset="UTF-8">
-
     <script src="dist/dist.js"></script>
+    <link rel="stylesheet" media="all" href="dist/dist.css">
+
+    <script src="dist/vendor/vim.js"></script>
 
     <script>
-      CodeMirror.modeURL = "/dist/vendor/modes/%N/%N.js";
+      CodeMirror.modeURL = "dist/vendor/modes/%N/%N.js";
     </script>
 
-    <link rel="stylesheet" media="all" href="dist/dist.css">
   </head>
 
-  <body>
+  <body onload="setKeyMap('vim')">
     <div id="wrapper">
       <textarea id="code" name="code"></textarea>
     <div>
