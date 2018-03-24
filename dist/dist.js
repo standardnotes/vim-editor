@@ -15568,7 +15568,10 @@ document.addEventListener("DOMContentLoaded", function (event) {
   }
 
   function loadEditor() {
-    editor = CodeMirror.fromTextArea(document.getElementById("code"), { lineNumbers: true });
+    editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+      lineNumbers: true,
+      lineWrapping: true
+    });
     editor.setSize("100%", "100%");
 
     setTimeout(function () {
