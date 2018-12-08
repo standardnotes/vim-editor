@@ -9684,11 +9684,7 @@ var ComponentManager = function () {
         console.log("Components API Message received:", event.data, "mobile?", mobileSource);
       }
 
-      // The first message will be the most reliable one, so we won't change it after any subsequent events,
-      // in case you receive an event from another window.
-      if (!_this.origin) {
-        _this.origin = event.origin;
-      }
+      _this.origin = event.origin;
       _this.mobileSource = mobileSource;
       // If from mobile app, JSON needs to be used.
       var data = mobileSource ? JSON.parse(event.data) : event.data;
@@ -9727,11 +9723,6 @@ var ComponentManager = function () {
         var originalMessage = this.sentMessages.filter(function (message) {
           return message.messageId === payload.original.messageId;
         })[0];
-
-        if (!originalMessage) {
-          // Connection must have been reset. Alert the user.
-          alert("This extension is attempting to communicate with Standard Notes, but an error is preventing it from doing so. Please restart this extension and try again.");
-        }
 
         if (originalMessage.callback) {
           originalMessage.callback(payload.data);
@@ -9772,7 +9763,6 @@ var ComponentManager = function () {
 
       this.messageQueue = [];
       this.environment = data.environment;
-      this.platform = data.platform;
       this.uuid = data.uuid;
 
       if (this.onReadyCallback) {
@@ -9894,27 +9884,8 @@ var ComponentManager = function () {
     value: function createItem(item, callback) {
       this.postMessage("create-item", { item: this.jsonObjectForItem(item) }, function (data) {
         var item = data.item;
-
-        // A previous version of the SN app had an issue where the item in the reply to create-item
-        // would be nested inside "items" and not "item". So handle both cases here.
-        if (!item && data.items && data.items.length > 0) {
-          item = data.items[0];
-        }
-
         this.associateItem(item);
         callback && callback(item);
-      }.bind(this));
-    }
-  }, {
-    key: "createItems",
-    value: function createItems(items, callback) {
-      var _this2 = this;
-
-      var mapped = items.map(function (item) {
-        return _this2.jsonObjectForItem(item);
-      });
-      this.postMessage("create-items", { items: mapped }, function (data) {
-        callback && callback(data.items);
       }.bind(this));
     }
   }, {
@@ -9934,21 +9905,18 @@ var ComponentManager = function () {
     }
   }, {
     key: "deleteItem",
-    value: function deleteItem(item, callback) {
-      this.deleteItems([item], callback);
+    value: function deleteItem(item) {
+      this.deleteItems([item]);
     }
   }, {
     key: "deleteItems",
-    value: function deleteItems(items, callback) {
+    value: function deleteItems(items) {
       var params = {
         items: items.map(function (item) {
           return this.jsonObjectForItem(item);
         }.bind(this))
       };
-
-      this.postMessage("delete-items", params, function (data) {
-        callback && callback(data);
-      });
+      this.postMessage("delete-items", params);
     }
   }, {
     key: "sendCustomEvent",
@@ -9960,50 +9928,20 @@ var ComponentManager = function () {
   }, {
     key: "saveItem",
     value: function saveItem(item, callback) {
-      var skipDebouncer = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-
-      this.saveItems([item], callback, skipDebouncer);
+      this.saveItems([item], callback);
     }
-
-    /* Presave allows clients to perform any actions last second before the save actually occurs (like setting previews).
-       Saves debounce by default, so if a client needs to compute a property on an item before saving, it's best to
-       hook into the debounce cycle so that clients don't have to implement their own debouncing.
-     */
-
-  }, {
-    key: "saveItemWithPresave",
-    value: function saveItemWithPresave(item, presave, callback) {
-      this.saveItemsWithPresave([item], presave, callback);
-    }
-  }, {
-    key: "saveItemsWithPresave",
-    value: function saveItemsWithPresave(items, presave, callback) {
-      this.saveItems(items, callback, false, presave);
-    }
-
-    /*
-    skipDebouncer allows saves to go through right away rather than waiting for timeout.
-    This should be used when saving items via other means besides keystrokes.
-     */
-
   }, {
     key: "saveItems",
     value: function saveItems(items, callback) {
-      var _this3 = this;
+      var _this2 = this;
 
-      var skipDebouncer = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-      var presave = arguments[3];
+      items = items.map(function (item) {
+        item.updated_at = new Date();
+        return this.jsonObjectForItem(item);
+      }.bind(this));
 
       var saveBlock = function saveBlock() {
-        // presave block allows client to gain the benefit of performing something in the debounce cycle.
-        presave && presave();
-
-        var mappedItems = items.map(function (item) {
-          item.updated_at = new Date();
-          return this.jsonObjectForItem(item);
-        }.bind(_this3));
-
-        _this3.postMessage("save-items", { items: mappedItems }, function (data) {
+        _this2.postMessage("save-items", { items: items }, function (data) {
           callback && callback();
         });
       };
@@ -10017,7 +9955,7 @@ var ComponentManager = function () {
          Note: it's important to modify saving items updated_at immediately and not after delay. If you modify after delay,
         a delayed sync could just be wrapping up, and will send back old data and replace what the user has typed.
       */
-      if (this.coallesedSaving == true && !skipDebouncer) {
+      if (this.coallesedSaving == true) {
         if (this.pendingSave) {
           clearTimeout(this.pendingSave);
         }
@@ -10025,8 +9963,6 @@ var ComponentManager = function () {
         this.pendingSave = setTimeout(function () {
           saveBlock();
         }, this.coallesedSavingDelay);
-      } else {
-        saveBlock();
       }
     }
   }, {
@@ -10102,36 +10038,14 @@ var ComponentManager = function () {
   }, {
     key: "deactivateAllCustomThemes",
     value: function deactivateAllCustomThemes() {
-      // make copy, as it will be modified during loop
-      // `getElementsByClassName` is an HTMLCollection, not an Array
-      var elements = Array.from(document.getElementsByClassName("custom-theme")).slice();
-      var _iteratorNormalCompletion3 = true;
-      var _didIteratorError3 = false;
-      var _iteratorError3 = undefined;
+      var elements = document.getElementsByClassName("custom-theme");
 
-      try {
-        for (var _iterator3 = elements[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-          var element = _step3.value;
-
-          if (element) {
-            element.disabled = true;
-            element.parentNode.removeChild(element);
-          }
+      [].forEach.call(elements, function (element) {
+        if (element) {
+          element.disabled = true;
+          element.parentNode.removeChild(element);
         }
-      } catch (err) {
-        _didIteratorError3 = true;
-        _iteratorError3 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion3 && _iterator3.return) {
-            _iterator3.return();
-          }
-        } finally {
-          if (_didIteratorError3) {
-            throw _iteratorError3;
-          }
-        }
-      }
+      });
     }
 
     /* Utilities */
@@ -15611,13 +15525,27 @@ if (window) {
 
 document.addEventListener("DOMContentLoaded", function (event) {
 
-  var modes = ["apl", "asciiarmor", "asn.1", "asterisk", "brainfuck", "clike", "clojure", "cmkake", "cobol", "coffeescript", "commonlisp", "crystal", "css", "cypher", "d", "dart", "diff", "django", "dockerfile", "dtd", "dylan", "ebnf", "ecl", "eiffel", "elm", "erlang", "factor", "fcl", "forth", "fortran", "gas", "gfm", "gherkin", "go", "groovy", "haml", "handlebars", "haskell", "haskell-literate", "haxe", "htmlembedded", "htmlmixed", "http", "idl", "javascript", "jinja2", "jsx", "julia", "livescript", "lua", "markdown", "mathematica", "mbox", "mirc", "mllike", "modelica", "mscgen", "mimps", "nginx", "nsis", "ntriples", "octave", "oz", "pascal", "pegjs", "perl", "php", "pig", "powershell", "properties", "protobug", "pug", "puppet", "python", "q", "r", "rst", "ruby", "rust", "sas", "sass", "scheme", "shell", "sieve", "slim", "smalltalk", "smarty", "solr", "soy", "sparql", "spreadsheet", "sql", "stex", "stylus", "swift", "tcl", "textile", "tiddlywiki", "tiki", "toml", "tornado", "troff", "ttcn", "ttcn-cfg", "turtle", "twig", "vb", "vbscript", "velocity", "verilog", "vhdl", "vue", "webidl", "xml", "xquery", "yacas", "yaml", "yaml-frontmatter", "z80"];
+  var modeByModeMode = CodeMirror.modeInfo.reduce(function (acc, m) {
+    if (acc[m.mode]) {
+      acc[m.mode].push(m);
+    } else {
+      acc[m.mode] = [m];
+    }
+    return acc;
+  }, {});
+
+  var modeModeAndMimeByName = CodeMirror.modeInfo.reduce(function (acc, m) {
+    acc[m.name] = { mode: m.mode, mime: m.mime };
+    return acc;
+  }, {});
+
+  var modes = Object.keys(modeModeAndMimeByName);
 
   var componentManager;
   var workingNote, clientData;
   var lastValue, lastUUID;
-  var editor, modeInput, select;
-  var defaultMode = "javascript";
+  var editor, select;
+  var defaultMode = "JavaScript";
   var ignoreTextChange = false;
   var initialLoad = true;
 
@@ -15634,7 +15562,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
   function save() {
     if (workingNote) {
-      // Be sure to capture this object as a variable, as workingNote may be reassigned in `streamContextItem`, so by the time
+      // Be sure to capture this object as a variable, as this.note may be reassigned in `streamContextItem`, so by the time
       // you modify it in the presave block, it may not be the same object anymore, so the presave values will not be applied to
       // the right object, and it will save incorrectly.
       var note = workingNote;
@@ -15688,6 +15616,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
   function loadEditor() {
     editor = CodeMirror.fromTextArea(document.getElementById("code"), {
       lineNumbers: true,
+      styleSelectedText: true,
       lineWrapping: true
     });
     editor.setSize("100%", "100%");
@@ -15735,36 +15664,60 @@ document.addEventListener("DOMContentLoaded", function (event) {
     save();
   };
 
-  function changeMode(inputMode) {
-    var val = inputMode,
-        m,
-        mode,
-        spec;
-    if (m = /.+\.([^.]+)$/.exec(val)) {
-      var info = CodeMirror.findModeByExtension(m[1]);
-      if (info) {
-        mode = info.mode;
-        spec = info.mime;
+  function inputModeToMode(inputMode) {
+    var convertCodeMirrorMode = function convertCodeMirrorMode(codeMirrorMode) {
+      if (codeMirrorMode) {
+        return {
+          name: codeMirrorMode.name,
+          mode: codeMirrorMode.mode,
+          mime: codeMirrorMode.mime
+        };
+      } else {
+        return null;
       }
-    } else if (/\//.test(val)) {
-      var info = CodeMirror.findModeByMIME(val);
-      if (info) {
-        mode = info.mode;
-        spec = val;
-      }
+    };
+
+    var extension = /.+\.([^.]+)$/.exec(inputMode);
+    var mime = /\//.test(inputMode);
+
+    if (extension) {
+      return convertCodeMirrorMode(CodeMirror.findModeByExtension(extension[1]));
+    } else if (mime) {
+      return convertCodeMirrorMode(CodeMirror.findModeByMIME(mime[1]));
+    } else if (modeModeAndMimeByName[inputMode]) {
+      return {
+        name: inputMode,
+        mode: modeModeAndMimeByName[inputMode].mode,
+        mime: modeModeAndMimeByName[inputMode].mime
+      };
+    } else if (modeByModeMode[inputMode]) {
+      var firstMode = modeByModeMode[inputMode][0];
+      return {
+        name: firstMode.name,
+        mode: firstMode.mode,
+        mime: firstMode.mime
+      };
     } else {
-      mode = spec = val;
+      return {
+        name: inputMode,
+        mode: inputMode,
+        mime: inputMode
+      };
     }
+  }
+
+  function changeMode(inputMode) {
+    var mode = inputModeToMode(inputMode);
 
     if (mode) {
-      editor.setOption("mode", spec);
-      CodeMirror.autoLoadMode(editor, mode);
+      editor.setOption("mode", mode.mime);
+      CodeMirror.autoLoadMode(editor, mode.mode);
       if (clientData) {
-        clientData.mode = mode;
+        clientData.mode = mode.name;
       }
-      document.getElementById("select").selectedIndex = modes.indexOf(mode);
+      document.getElementById("select").selectedIndex = modes.indexOf(mode.name);
     } else {
-      console.error("Could not find a mode corresponding to " + val);
+      console.error("Could not find a mode corresponding to " + inputMode);
     }
   }
 });
