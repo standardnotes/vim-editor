@@ -53,6 +53,11 @@ body, html {
   .CodeMirror-code .cm-comment {
     background: var(--sn-stylekit-contrast-background-color);
     color: var(--sn-stylekit-info-color);
+
+    &.CodeMirror-selectedtext {
+      color: var(--sn-stylekit-info-contrast-color) !important;
+      background: transparent;
+    }
   }
 
   .cm-header {
@@ -66,10 +71,20 @@ body, html {
 
   .cm-variable, .cm-variable-1, .cm-variable-2, .cm-variable-3, .cm-string-2 {
     color: var(--sn-stylekit-info-color) !important;
+
+    &.CodeMirror-selectedtext {
+      color: var(--sn-stylekit-info-contrast-color) !important;
+      background: transparent;
+    }
   }
 
   .cm-link, .cm-string, .cm-keyword, .cm-builtin, .cm-number, .cm-attribute {
     color: var(--sn-stylekit-info-color) !important;
+
+    &.CodeMirror-selectedtext {
+      color: var(--sn-stylekit-info-contrast-color) !important;
+      background: transparent;
+    }
   }
 
   .cm-qualifier, .cm-meta {
@@ -98,12 +113,21 @@ body, html {
   border-color: var(--sn-stylekit-info-color) !important;
 }
 
+.CodeMirror-cursors {
+  z-index: 10 !important; // In Markdown mode, cursor is hidden behind code blocks
+}
+
 .CodeMirror-selected {
   background: var(--sn-stylekit-info-color) !important;
+  // With Vim editor mode, text selection doesn't operate as usual.
+  // .CodeMirror-selectedtext isnt' added to every element, so we can't change the text color directly.
+  // This is a workaround:
+  opacity: 0.4;
 }
 
 .CodeMirror-selectedtext {
-  background: var(--sn-stylekit-info-contrast-color) !important;
+  color: var(--sn-stylekit-info-contrast-color) !important;
+  background: transparent;
 }
 
 .CodeMirror-gutters {
