@@ -15908,6 +15908,10 @@ document.addEventListener("DOMContentLoaded", function (event) {
   }
 
   function changeMode(inputMode) {
+    if (!inputMode) {
+      return;
+    }
+
     var mode = inputModeToMode(inputMode);
 
     if (mode) {
