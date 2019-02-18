@@ -2250,15 +2250,8 @@ body, html {
   color: var(--sn-stylekit-neutral-color);
   cursor: pointer;
 }
-
-#default-message {
-  font-size: 12px;
+#default-label.success {
   color: var(--sn-stylekit-info-color);
-  display: none;
-}
-
-#default-message.shown {
-  display: inline-block;
 }
 
 #select {
@@ -2270,6 +2263,7 @@ body, html {
   color: var(--sn-stylekit-editor-foreground-color) !important;
   border: 0 !important;
   font-family: var(--sn-stylekit-monospace-font);
+  -webkit-overflow-scrolling: touch;
   font-size: calc(var(--sn-stylekit-font-size-editor) - 0.1rem);
   flex: 1 1 auto;
   width: 100%;

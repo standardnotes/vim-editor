@@ -15733,10 +15733,6 @@ document.addEventListener("DOMContentLoaded", function (event) {
       if (platform) {
         document.body.classList.add(platform);
       }
-
-      // assign editor's default from component settings
-      var defaultLanguage = componentManager.componentDataValueForKey("language");
-      changeMode(defaultLanguage);
     });
 
     componentManager.streamContextItem(function (note) {
@@ -15775,15 +15771,18 @@ document.addEventListener("DOMContentLoaded", function (event) {
     if (note.isMetadataUpdate) {
       return;
     }
-    clientData = note.clientData;
 
+    clientData = note.clientData;
     var mode = clientData.mode;
     if (mode) {
       changeMode(mode);
+    } else {
+      // assign editor's default from component settings
+      var defaultLanguage = componentManager.componentDataValueForKey("language");
+      changeMode(defaultLanguage);
     }
 
     if (editor) {
-
       if (note.content.text !== lastValue) {
         ignoreTextChange = true;
         editor.getDoc().setValue(workingNote.content.text);
@@ -15855,13 +15854,15 @@ document.addEventListener("DOMContentLoaded", function (event) {
     componentManager.setComponentDataValueForKey("language", language);
 
     // show a confirmation message
-    var message = document.getElementById("default-message");
-    message.innerHTML = "Default Set";
-    message.classList.add("shown");
+    var message = document.getElementById("default-label");
+    var original = message.innerHTML;
+    message.innerHTML = "Success";
+    message.classList.add("success");
 
     setTimeout(function () {
-      message.classList.remove("shown");
-    }, 2000);
+      message.classList.remove("success");
+      message.innerHTML = original;
+    }, 750);
   };
 
   function inputModeToMode(inputMode) {
