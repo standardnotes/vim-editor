@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   const modes = Object.keys(modeModeAndMimeByName);
 
-  var componentManager;
+  var componentRelay;
   var workingNote, clientData;
   var lastValue, lastUUID;
   var editor, select;
@@ -25,16 +25,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
   var initialLoad = true;
 
   function loadComponentManager() {
-    var permissions = [{name: "stream-context-item"}]
-    componentManager = new ComponentManager(permissions, function(){
-      // on ready
-      var platform = componentManager.platform;
-      if(platform) {
-        document.body.classList.add(platform);
+    componentRelay = new ComponentRelay({
+      targetWindow: window,
+      onReady: () => {
+        // on ready
+        var platform = componentRelay.platform;
+        if(platform) {
+          document.body.classList.add(platform);
+        }
       }
     });
 
-    componentManager.streamContextItem((note) => {
+    componentRelay.streamContextItem((note) => {
       onReceivedNote(note);
     });
   }
@@ -46,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
       // the right object, and it will save incorrectly.
       let note = workingNote;
 
-      componentManager.saveItemWithPresave(note, () => {
+      componentRelay.saveItemWithPresave(note, () => {
         lastValue = editor.getValue();
         note.content.text = lastValue;
         note.clientData = clientData;
@@ -77,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
       changeMode(mode);
     } else {
       // assign editor's default from component settings
-      let defaultLanguage = componentManager.componentDataValueForKey("language");
+      let defaultLanguage = componentRelay.getComponentDataValueForKey("language");
       changeMode(defaultLanguage);
     }
 
@@ -149,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     let language = modes[select.selectedIndex];
 
     // assign default language for this editor when entering notes
-    componentManager.setComponentDataValueForKey("language", language);
+    componentRelay.setComponentDataValueForKey("language", language);
 
     // show a confirmation message
     let message = document.getElementById("default-label");

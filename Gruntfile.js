@@ -65,7 +65,7 @@ module.exports = function(grunt) {
       lib: {
         src: [
           'node_modules/codemirror/lib/codemirror.js',
-          'node_modules/sn-components-api/dist/dist.js',
+          'node_modules/@standardnotes/component-relay/dist/dist.js',
           'vendor/*.js'
         ],
         dest: 'dist/lib.js',
