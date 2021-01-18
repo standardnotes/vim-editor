@@ -15091,24 +15091,24 @@ return CodeMirror$1;
 ;(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 
-document.addEventListener("DOMContentLoaded", function (event) {
-
+document.addEventListener("DOMContentLoaded", function () {
   var modeByModeMode = CodeMirror.modeInfo.reduce(function (acc, m) {
     if (acc[m.mode]) {
       acc[m.mode].push(m);
     } else {
       acc[m.mode] = [m];
     }
+
     return acc;
   }, {});
-
   var modeModeAndMimeByName = CodeMirror.modeInfo.reduce(function (acc, m) {
-    acc[m.name] = { mode: m.mode, mime: m.mime };
+    acc[m.name] = {
+      mode: m.mode,
+      mime: m.mime
+    };
     return acc;
   }, {});
-
   var modes = Object.keys(modeModeAndMimeByName);
-
   var componentRelay;
   var workingNote, clientData;
   var lastValue, lastUUID;
@@ -15123,12 +15123,12 @@ document.addEventListener("DOMContentLoaded", function (event) {
       onReady: function onReady() {
         // on ready
         var platform = componentRelay.platform;
+
         if (platform) {
           document.body.classList.add(platform);
         }
       }
     });
-
     componentRelay.streamContextItem(function (note) {
       onReceivedNote(note);
     });
@@ -15140,12 +15140,10 @@ document.addEventListener("DOMContentLoaded", function (event) {
       // you modify it in the presave block, it may not be the same object anymore, so the presave values will not be applied to
       // the right object, and it will save incorrectly.
       var note = workingNote;
-
       componentRelay.saveItemWithPresave(note, function () {
         lastValue = editor.getValue();
         note.content.text = lastValue;
         note.clientData = clientData;
-
         note.content.preview_plain = null;
         note.content.preview_html = null;
       });
@@ -15160,14 +15158,15 @@ document.addEventListener("DOMContentLoaded", function (event) {
       lastUUID = note.uuid;
     }
 
-    workingNote = note;
-    // Only update UI on non-metadata updates.
+    workingNote = note; // Only update UI on non-metadata updates.
+
     if (note.isMetadataUpdate) {
       return;
     }
 
     clientData = note.clientData;
     var mode = clientData.mode;
+
     if (mode) {
       changeMode(mode);
     } else {
@@ -15197,36 +15196,32 @@ document.addEventListener("DOMContentLoaded", function (event) {
       lineWrapping: true
     });
     editor.setSize("100%", "100%");
-
     setTimeout(function () {
       changeMode(defaultMode);
     }, 1);
-
     createSelectElements();
-
     editor.on("change", function () {
       if (ignoreTextChange) {
         return;
       }
+
       save();
     });
   }
 
   function createSelectElements() {
     select = document.getElementById("select");
-    var index = 0;
-    for (var element in modes) {
-      var opt = document.createElement("option");
-      opt.value = index;
-      opt.innerHTML = modes[index];
-      select.appendChild(opt);
-      index++;
+
+    for (var index = 0; index < modes.length; index++) {
+      var option = document.createElement("option");
+      option.value = index;
+      option.innerHTML = modes[index];
+      select.appendChild(option);
     }
   }
 
   loadEditor();
   loadComponentManager();
-
   /*
     Editor Modes
   */
@@ -15235,24 +15230,21 @@ document.addEventListener("DOMContentLoaded", function (event) {
     editor.setOption("keyMap", keymap);
   };
 
-  window.onLanguageSelect = function (event) {
+  window.onLanguageSelect = function () {
     var language = modes[select.selectedIndex];
     changeMode(language);
     save();
   };
 
-  window.setDefaultLanguage = function (event) {
-    var language = modes[select.selectedIndex];
+  window.setDefaultLanguage = function () {
+    var language = modes[select.selectedIndex]; // assign default language for this editor when entering notes
 
-    // assign default language for this editor when entering notes
-    componentRelay.setComponentDataValueForKey("language", language);
+    componentRelay.setComponentDataValueForKey("language", language); // show a confirmation message
 
-    // show a confirmation message
     var message = document.getElementById("default-label");
     var original = message.innerHTML;
     message.innerHTML = "Success";
     message.classList.add("success");
-
     setTimeout(function () {
       message.classList.remove("success");
       message.innerHTML = original;
@@ -15311,9 +15303,11 @@ document.addEventListener("DOMContentLoaded", function (event) {
     if (mode) {
       editor.setOption("mode", mode.mime);
       CodeMirror.autoLoadMode(editor, mode.mode);
+
       if (clientData) {
         clientData.mode = mode.name;
       }
+
       document.getElementById("select").selectedIndex = modes.indexOf(mode.name);
     } else {
       console.error("Could not find a mode corresponding to " + inputMode);
